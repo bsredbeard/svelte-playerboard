@@ -1,0 +1,154 @@
+<div class="player" ref:root>
+    <div class="player__dragbar" ref:handle></div>
+    <div class="player__info">
+        <div class="player__name">
+            <EditableField label="Player" value="{playerName}" on:accept="set({playerName: event.value })" />
+        </div>
+        <div class="player__character">
+            <EditableField label="Character" value="{characterName}" on:accept="set({characterName: event.value })" />
+        </div>
+        <div class="player__tags">
+            {#each tags as tag}
+                <Tag name="{tag}" canRemove="{true}" on:remove="removeTag(event.tag)" />
+            {/each}
+        </div>
+        <div class="update">
+            <div class="update__tags">
+                {#if addingTag}
+                    <input type="text" ref:addTagField bind:value="newTagName" on:keyup="addTag(event)" placeholder="New tag" />
+                    <button on:click="set({newTagName: '', addingTag: false })">X</button>
+                {:else}
+                    <button on:click="addTag()">Add a tag</button>
+                {/if}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.player{
+    position: absolute;
+    max-width: 30vw;
+    max-height: 30vh;
+    display: flex;
+    flex-direction: column;
+    background: white;
+    border: 1px solid #2f5472;
+    border-top-color: #467296;
+    border-left-color: #467296;
+    padding: 1px;
+}
+.player__dragbar{
+    height: 20px;
+    border: 1px outset #2f5472;
+    cursor: move;
+    background: radial-gradient(black 15%, transparent 16%) 0 0, radial-gradient(black 15%, transparent 16%) 8px 8px, radial-gradient(rgba(255,255,255,.1) 15%, transparent 20%) 0 1px, radial-gradient(rgba(255,255,255,.1) 15%, transparent 20%) 8px 9px;
+    background-color: #4e4e4e;
+    background-size: 16px 16px;
+}
+.player__info{
+    flex-grow: 1;
+    overflow-y: auto;
+}
+</style>
+
+<script>
+import Tag from './Tag.html';
+import EditableField from './EditableField.html';
+import Hammer from 'hammerjs';
+
+export default {
+    components: {
+        Tag,
+        EditableField
+    },
+    data() {
+        return {
+            playerName: 'Bob',
+            characterName: 'Sir Bobsalot',
+            tags: [],
+            addingTag: false,
+            newTagName: '',
+            position: {
+                x: 0,
+                y: 0,
+                isDragging: false
+            }
+        }
+    },
+    methods: {
+        removeTag(tagName) {
+            const {tags} = this.get();
+            this.set({
+                tags: tags.filter(x => x !== tagName)
+            });
+        },
+        addTag(evt) {
+            if(!evt){
+                this.set({ addingTag: true });
+                this.refs.addTagField.focus();
+            } else if(evt.keyCode===13){
+                const {newTagName, tags} = this.get();
+                if(typeof newTagName ==='string'){
+                    const trimmedTagName = newTagName.trim();
+                    const props = evt.shiftKey ? {} : {addingTag: false};
+                    props.newTagName = '';
+                    if(trimmedTagName){
+                        tags.push(trimmedTagName);
+                        props.tags = tags;
+                    }
+                    this.set(props);
+                }
+            }
+        },
+        handleDrag(evt) {
+            const {position} = this.get();
+            let {x, y, isDragging} = position;
+            const root = this.refs.root;
+            const handle = this.refs.handle;
+            if(!isDragging){
+                isDragging = true;
+                x = root.offsetLeft;
+                y = root.offsetTop;
+                root.style.zIndex = 20;
+            }
+
+            const newX = evt.deltaX + x;
+            const newY = evt.deltaY + y;
+
+            root.style.left = `${newX}px`;
+            root.style.top = `${newY}px`;
+
+            if(evt.isFinal){
+                isDragging = false;
+                root.style.zIndex = 1;
+            }
+            
+            this.set({
+                position: {
+                    isDragging, x, y
+                }
+            });
+        }
+    },
+    oncreate(){
+        const dragManager = new Hammer(this.refs.handle);
+        dragManager.add(new Hammer.Pan({
+            direction: Hammer.DIRECTION_ALL,
+            threshold: 0
+        }));
+        dragManager.on('pan', this.handleDrag.bind(this));
+        const {position} = this.get();
+        this.refs.root.style.top = `${position.y}px`;
+        this.refs.root.style.left = `${position.x}px`;
+        this.disconnectDrag = () => {
+            dragManager.stop();
+            dragManager.destroy();
+        };
+    },
+    ondestroy(){
+        this.disconnectDrag();
+    }
+}
+
+</script>

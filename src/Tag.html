@@ -1,0 +1,42 @@
+<div class="tag">
+    <div class="tag__name">{name}</div>
+    {#if canRemoveTag}
+        <button class="tag__remove" on:click="fire('remove', { tag: name })">X</button>
+    {/if}
+</div>
+
+<style>
+.tag{
+    background:#666;
+    color: white;
+    display: inline-flex;
+    padding: 0 0 0 1em;
+    align-items: center;
+    border-radius: 25px;
+    margin-bottom: 0.25em;
+}
+.tag__remove{
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    align-self: stretch;
+    padding-left: 1em;
+    padding-right: 1em;
+    margin: 0 0 0 1em;
+    cursor: pointer;
+}
+</style>
+
+<script>
+export default {
+    data() {
+        return {
+            name: '',
+            canRemove: false
+        }
+    },
+    computed: {
+        canRemoveTag: ({canRemove}) => !!canRemove
+    }
+}
+</script>

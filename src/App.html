@@ -1,0 +1,172 @@
+<svelte:head>
+	<style type="text/css">
+		html, body {
+			margin: 0;
+			padding: 0;
+			min-height: 100vh;
+		}
+	</style>
+</svelte:head>
+
+<main>
+	<header class="header">
+		<section class="header__configure">
+			<button>
+				Configure
+			</button>
+		</section>
+		<section class="header__manipulate">
+			<div class="add-player" class:expanded="addPlayerExpanded">
+				<div class="add-player__header" on:click="set({addPlayerExpanded: !addPlayerExpanded})">
+					Add Player
+				</div>
+				{#if addPlayerExpanded}
+				<form transition:slide on:submit="add(event)">
+					<div class="add-player__fields">
+						<label class="add-player__player-name --toggleable">
+							Player Name:
+							<input type="text" bind:value=playerName />
+						</label>
+						<label class="add-player__character-name --toggleable">
+							Character Name:
+							<input type="text" bind:value=characterName />
+						</label>
+						<button type="submit">
+							Add player
+						</button>
+					</div>
+				</form>
+				{/if}
+			</div>
+		</section>
+		<section class="header__reset">
+			<button on:click="reset()">
+				Clear Board
+			</button>
+		</section>
+	</header>
+	<div class="whiteboard" class:empty="players.length < 1">
+		{#each players as p}
+			<Player bind:playerName="p.playerName" bind:characterName="p.characterName" bind:tags="p.tags"  />
+		{/each}
+	</div>
+	<div class="debug">
+		{json(players)}
+	</div>
+</main>
+
+<style>
+main{
+	display: flex;
+	flex-direction: column;
+	height: 100vh;
+}
+.header{
+	display: flex;
+	border-bottom: 1px solid black;
+	background-color: #2f5472;
+	justify-content: space-between;
+}
+.header>section{
+	width: 20%;
+}
+.header>section.header__manipulate{
+	width: 55%;
+}
+.header__reset{
+	display: flex;
+	justify-content: flex-end;
+	align-items: flex-start;
+}
+.add-player{
+	background-color: #7b9ab3;
+	border-radius: 8px;
+	border: 1px solid #4a6881;
+}
+.add-player.expanded{
+	border-bottom-left-radius: 0;
+	border-bottom-right-radius: 0;
+	border-bottom: none;
+}
+.add-player__header{
+	cursor: pointer;
+	color: white;
+	text-align: center;
+	margin-top: 0.25em;
+	padding: 5px;
+	border-bottom: 1px solid #4a6881;
+}
+.add-player__fields{
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: space-around;
+	padding: 4px;
+}
+.add-player__fields label{
+	width: 45%;
+}
+.add-player__fields button[type="submit"]{
+	margin-left: auto;
+	margin-right: auto;
+}
+.whiteboard{
+	flex-grow: 1;
+	background: #dedede;
+	position: relative;
+}
+.whiteboard.empty::before{
+	content: 'Add a player to the whiteboard.';
+	display: block;
+	margin-top: 40vh;
+	text-align: center;
+}
+</style>
+
+<script>
+import { slide } from 'svelte-transitions';
+import Player from './Player.html'
+
+export default {
+	components: {
+		Player
+	},
+	helpers: {
+		json: (anything) => JSON.stringify(anything)
+	},
+	transitions: {
+		slide
+	},
+	data() {
+		return {
+			addPlayerExpanded: true,
+			players: [],
+			playerName: '',
+			characterName: ''
+		}
+	},
+	methods: {
+		add(evt) {
+			evt.preventDefault();
+			const { players, playerName, characterName } = this.get();
+			this.set({
+				players: [...players, {
+					playerName: playerName,
+					characterName: characterName,
+					tags: []
+				}],
+				playerName: '',
+				characterName: '',
+				addPlayerExpanded: false
+			});
+		},
+		reset() {
+			this.set({
+				addPlayerExpanded: true,
+				players: [],
+				playerName: '',
+				characterName: ''
+			})
+		}
+	}
+}
+</script>

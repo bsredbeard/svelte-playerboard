@@ -1,0 +1,41 @@
+<label on:click="labelClick()">
+    {#if !editMode}
+        {label}: {value}
+    {:else}
+        {label}: <input type="text" bind:value=value on:blur="blurred()" on:keyup="keyup(event)" ref:field />
+    {/if}
+</label>
+
+<style>
+</style>
+
+<script>
+export default {
+    data() {
+        return {
+            editMode: false,
+            label: 'Label',
+            value: 'Nothing'
+        }
+    },
+    methods: {
+        labelClick() {
+            const {editMode} = this.get();
+            if(!editMode){
+                this.set({editMode: true});
+                this.ref.field.focus()
+            }
+        },
+        blurred() {
+            this.set({editMode: false});
+            const {value} = this.get();
+            this.fire('accept', {value});
+        },
+        keyup(evt){
+            if(evt.keyCode === 13){
+                this.blurred();
+            }
+        }
+    }
+}
+</script>
