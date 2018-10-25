@@ -7,6 +7,7 @@
 		}
 	</style>
 </svelte:head>
+<svelte:window bind:innerWidth=windowWidth bind:innerHeight=windowHeight></svelte:window>
 
 <main>
 	<header class="header">
@@ -46,8 +47,8 @@
 		</section>
 	</header>
 	<div class="whiteboard" class:empty="players.length < 1">
-		{#each players as p}
-			<Player bind:playerName="p.playerName" bind:characterName="p.characterName" bind:tags="p.tags"  />
+		{#each players as p (p.id)}
+			<Player bind:playerName="p.playerName" bind:characterName="p.characterName" bind:tags="p.tags" on:remove="removePlayer(p)" on:dragEnd="playerDragEnd(p, event.x, event.y)" />
 		{/each}
 	</div>
 	<div class="debug">
@@ -126,6 +127,20 @@ main{
 import { slide } from 'svelte-transitions';
 import Player from './Player.html'
 
+const {autoId, resetAutoId} = (() => {
+	let curr = 0;
+	return {
+		autoId: () => curr++,
+		resetAutoId: () => { curr = 0; }
+	};
+})();
+
+const truncate = (val, positions) => {
+	if(!positions) positions = 3;
+	const factor = Math.pow(10, positions);
+	return Math.round(val * factor) / factor;
+};
+
 export default {
 	components: {
 		Player
@@ -141,7 +156,9 @@ export default {
 			addPlayerExpanded: true,
 			players: [],
 			playerName: '',
-			characterName: ''
+			characterName: '',
+			windowWidth: 1,
+			windowHeight: 1
 		}
 	},
 	methods: {
@@ -150,6 +167,7 @@ export default {
 			const { players, playerName, characterName } = this.get();
 			this.set({
 				players: [...players, {
+					id: autoId(),
 					playerName: playerName,
 					characterName: characterName,
 					tags: []
@@ -165,7 +183,20 @@ export default {
 				players: [],
 				playerName: '',
 				characterName: ''
-			})
+			});
+			resetAutoId();
+		},
+		removePlayer(player){
+			const {players} = this.get();
+			this.set({
+				players: players.filter(x => x !== player)
+			});
+		},
+		playerDragEnd(player, x, y){
+			const {players, windowHeight, windowWidth} = this.get();
+			player.x = truncate(x / windowWidth);
+			player.y = truncate(y / windowHeight);
+			this.set({players});
 		}
 	}
 }

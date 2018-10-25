@@ -1,5 +1,10 @@
 <div class="player" ref:root>
-    <div class="player__dragbar" ref:handle></div>
+    <header class="player__header">
+        <div class="player__dragbar" ref:handle></div>
+        <div class="player__remove" on:click="fire('remove', {})">
+            <div class="player__remove-icon"></div>
+        </div>
+    </header>
     <div class="player__info">
         <div class="player__name">
             <EditableField label="Player" value="{playerName}" on:accept="set({playerName: event.value })" />
@@ -25,7 +30,13 @@
     </div>
 </div>
 
-<style>
+<style lang="less">
+.mesh(){
+    background: radial-gradient(black 15%, transparent 16%) 0 0, radial-gradient(black 15%, transparent 16%) 8px 8px, radial-gradient(rgba(255,255,255,.1) 15%, transparent 20%) 0 1px, radial-gradient(rgba(255,255,255,.1) 15%, transparent 20%) 8px 9px;
+    background-color: #4e4e4e;
+    background-size: 16px 16px;
+    border: 1px outset #7c7c7c;
+}
 .player{
     position: absolute;
     max-width: 30vw;
@@ -38,17 +49,42 @@
     border-left-color: #467296;
     padding: 1px;
 }
-.player__dragbar{
+.player__header{
     height: 20px;
-    border: 1px outset #2f5472;
+    display: flex;
+}
+.player__dragbar{
     cursor: move;
-    background: radial-gradient(black 15%, transparent 16%) 0 0, radial-gradient(black 15%, transparent 16%) 8px 8px, radial-gradient(rgba(255,255,255,.1) 15%, transparent 20%) 0 1px, radial-gradient(rgba(255,255,255,.1) 15%, transparent 20%) 8px 9px;
-    background-color: #4e4e4e;
-    background-size: 16px 16px;
+    flex-grow: 1;
+    .mesh();
 }
 .player__info{
     flex-grow: 1;
     overflow-y: auto;
+}
+.player__remove{
+    margin-left: 10px;
+    cursor: pointer;
+    .mesh();
+}
+.player__remove-icon{
+    background: white;
+    height: 10px;
+    position: relative;
+    width: 2px;
+    transform: rotateZ(45deg);
+    margin-left: 8px;
+    margin-right: 8px;
+    margin-top: 5px;
+    &::after{
+        background: white;
+        content: "";
+        height: 2px;
+        left: -4px;
+        position: absolute;
+        top: 4px;
+        width: 10px;
+    }
 }
 </style>
 
@@ -122,6 +158,10 @@ export default {
             if(evt.isFinal){
                 isDragging = false;
                 root.style.zIndex = 1;
+                this.fire('dragEnd', {
+                    x: newX,
+                    y: newY
+                });
             }
             
             this.set({
