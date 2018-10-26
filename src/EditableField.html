@@ -1,4 +1,4 @@
-<label on:click="labelClick()">
+<label on:click="focus()" on:focus="focus()" tabindex="{tabIndex}">
     {#if !editMode}
         {label}: {value}
     {:else}
@@ -18,12 +18,15 @@ export default {
             value: 'Nothing'
         }
     },
+    computed: {
+        tabIndex: ({editMode}) => editMode ? -1 : 0
+    },
     methods: {
-        labelClick() {
+        focus() {
             const {editMode} = this.get();
             if(!editMode){
                 this.set({editMode: true});
-                this.ref.field.focus()
+                this.refs.field.focus();
             }
         },
         blurred() {
