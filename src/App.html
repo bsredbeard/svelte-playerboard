@@ -22,7 +22,7 @@
 					Add Player
 				</div>
 				{#if addPlayerExpanded}
-				<form transition:slide on:submit="add(event)">
+				<form transition:slide on:submit="add(playerName, characterName)" use:prevent="'submit'">
 					<div class="add-player__fields">
 						<label class="add-player__player-name --toggleable">
 							Player Name:
@@ -48,11 +48,8 @@
 	</header>
 	<div class="whiteboard" class:empty="players.length < 1">
 		{#each players as p (p.id)}
-			<Player bind:playerName="p.playerName" bind:characterName="p.characterName" bind:tags="p.tags" on:remove="removePlayer(p)" on:dragEnd="playerDragEnd(p, event.x, event.y)" />
+			<Player bind:playerName="p.playerName" bind:characterName="p.characterName" bind:tags="p.tags" on:remove="removePlayer(p)" on:dragEnd="playerDragEnd(p, event.x, event.y)" position="{getPosition(p, windowHeight, windowWidth)}" />
 		{/each}
-	</div>
-	<div class="debug">
-		{json(players)}
 	</div>
 	{#if showOverlay}
 	<div class="overlay" transition:fade on:click="set({showOverlay: false})">
@@ -66,7 +63,7 @@
 					<p>
 						The svelte playerboard automatically saves all changes to your browser, but you can choose the name that you save your data under. Either enter a new name, or select an existing board slot to begin autosaving this board there.
 					</p>
-					<form use:prevent="'submit'" on:submit="startSaving(tempSaveSlot)">
+					<form use:prevent="'submit'" on:submit="save(tempSaveSlot)">
 						{#if saveFile}
 							<div class="info alert">
 								Currently saving to: {saveFile}
@@ -308,7 +305,19 @@ export default {
 		Player
 	},
 	helpers: {
-		json: (anything) => JSON.stringify(anything)
+		getPosition: (player, windowHeight, windowWidth) => {
+			const initialPosition = {
+				x: 0,
+				y: 0
+			};
+			if(player.x){
+				initialPosition.x = truncate(player.x * windowWidth, 3);
+			}
+			if(player.y){
+				initialPosition.y = truncate(player.y * windowHeight, 3);
+			}
+			return initialPosition;
+		}
 	},
 	transitions: {
 		slide,
@@ -320,7 +329,14 @@ export default {
 		this.set({
 			existingSaves: Storage.getLayoutNames()
 		})
-		console.log('done checking for saved layout');
+	},
+	onstate({changed, current}){
+		const {saveFile} = current;
+		if(changed.players){
+			if(saveFile){
+				this.save(saveFile);
+			}
+		}
 	},
 	data() {
 		return {
@@ -337,15 +353,16 @@ export default {
 		}
 	},
 	methods: {
-		add(evt) {
-			evt.preventDefault();
-			const { players, playerName, characterName } = this.get();
+		add(playerName, characterName) {
+			const { players } = this.get();
 			this.set({
 				players: [...players, {
 					id: autoId.next(),
 					playerName: playerName,
 					characterName: characterName,
-					tags: []
+					tags: [],
+					x: 0.5,
+					y: 0.1
 				}],
 				playerName: '',
 				characterName: '',
@@ -357,15 +374,22 @@ export default {
 				addPlayerExpanded: true,
 				players: [],
 				playerName: '',
-				characterName: ''
+				characterName: '',
+				saveFile: '',
+				tempSaveSlot: ''
 			});
-			autoId.reset();
+			autoId.set(0);
 		},
 		removePlayer(player){
 			const {players} = this.get();
+			const newPlayers = players.filter(x => x.id !== player.id);
+			if(players.length === newPlayers.length){
+				console.warn('Couldn\'t remove a player...');
+			}
 			this.set({
-				players: players.filter(x => x !== player)
+				players: newPlayers
 			});
+
 		},
 		playerDragEnd(player, x, y){
 			const {players, windowHeight, windowWidth} = this.get();
@@ -373,7 +397,7 @@ export default {
 			player.y = truncate(y / windowHeight);
 			this.set({players});
 		},
-		startSaving(saveSlotName){
+		save(saveSlotName){
 			const {players} = this.get();
 			Storage.saveLayout(saveSlotName, players);
 			this.set({
@@ -385,12 +409,15 @@ export default {
 		loadLayout(saveSlotName){
 			const layout = Storage.getLayout(saveSlotName);
 			if(layout != null){
+				console.info(`Loading ${saveSlotName}`);
 				this.set({
 					addPlayerExpanded: false,
 					players: layout,
 					tempSaveSlot: '',
 					saveFile: saveSlotName
 				});
+				const nextId = layout.map(p => p.id).reduce((agg, id) => id >= agg ? id+1 : agg, 0);
+				autoId.set(nextId);
 			}
 		}
 	}

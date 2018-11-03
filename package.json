@@ -23,7 +23,8 @@
     "autobuild": "rollup -c -w",
     "dev": "run-p start:dev autobuild",
     "start": "sirv public",
-    "start:dev": "sirv public --dev"
+    "start:dev": "sirv public --dev",
+    "publish": "surge public"
   },
   "dependencies": {
     "ejs": "^2.6.1",
