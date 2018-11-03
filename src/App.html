@@ -52,7 +52,7 @@
 		{/each}
 	</div>
 	{#if showOverlay}
-	<div class="overlay" transition:fade on:click="set({showOverlay: false})">
+	<div class="overlay" transition:fade on:click="set({showOverlay: false})" on:keyup="dismissConfig(event)">
 		<section class="config" use:stopPropagation="'click'">
 			<header class="config__header">
 				Configure
@@ -88,7 +88,7 @@
 							</div>
 						</div>
 						<div>
-							Enter a slot name: <input type="text" bind:value="tempSaveSlot" />
+							Enter a slot name: <input type="text" bind:value="tempSaveSlot" use:autofocus="showOverlay" />
 							{#if existingSaves.includes(tempSaveSlot) && saveFile !== tempSaveSlot}
 								<button on:click="loadLayout(tempSaveSlot)">
 									Load Selected Layout
@@ -290,7 +290,7 @@ main{
 import { slide, fade } from 'svelte-transitions';
 import Player from './Player.html';
 import AutoId from './autoid';
-import {truncate, preventDefault, stopPropagation} from './helpers';
+import {truncate, preventDefault, stopPropagation, autofocus} from './helpers';
 import * as Storage from './storage';
 
 // create autoId and resetAutoId functions
@@ -299,7 +299,8 @@ const autoId = new AutoId();
 export default {
 	actions: {
 		prevent: preventDefault,
-		stopPropagation: stopPropagation
+		stopPropagation: stopPropagation,
+		autofocus: autofocus
 	},
 	components: {
 		Player
@@ -396,6 +397,15 @@ export default {
 			player.x = truncate(x / windowWidth);
 			player.y = truncate(y / windowHeight);
 			this.set({players});
+		},
+		dismissConfig(evt) {
+			if(evt.which===27){
+				//escape key
+				this.set({
+					tempSaveSlot: '',
+					showOverlay: false
+				});
+			}
 		},
 		save(saveSlotName){
 			const {players} = this.get();

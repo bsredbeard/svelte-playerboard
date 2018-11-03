@@ -45,3 +45,18 @@ export function stopPropagation(node, eventName) {
         }
     }
 };
+
+export function autofocus(node, val) {
+    const canFocus = (typeof node.focus === 'function');
+    if(val && canFocus){
+        node.focus();
+    }
+    return {
+        update(newVal){
+            if(newVal && canFocus){
+                node.focus()
+            }
+        },
+        destroy(){}
+    }
+}
