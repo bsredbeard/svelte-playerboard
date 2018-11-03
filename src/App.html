@@ -79,16 +79,29 @@
 						<div>
 							Select an existing slot:
 							<div class="existing-slots">
-								<div class="existing-slot" on:click="set({tempSaveSlot:'Unwary adventurers'})">
-									Unwary adventurers
+								{#each existingSaves as saveSlot}
+								<div class="existing-slot" on:click="set({tempSaveSlot: saveSlot})">
+									{saveSlot}
 								</div>
+								{:else}
+								<div class="existing-slot">
+									<em>No existing save slots</em>
+								</div>
+								{/each}
 							</div>
 						</div>
 						<div>
 							Enter a slot name: <input type="text" bind:value="tempSaveSlot" />
+							{#if existingSaves.includes(tempSaveSlot) && saveFile !== tempSaveSlot}
+								<button on:click="loadLayout(tempSaveSlot)">
+									Load Selected Layout
+								</button>
+							{/if}
 						</div>
 						<div class="config__submit">
-							<input type="submit" value="Start Saving" />
+							<button type="submit" disabled="{!tempSaveSlot || tempSaveSlot === saveFile}">
+								Save Current Layout in Selected Slot
+							</button>
 						</div>
 					</form>
 				</div>
@@ -186,6 +199,18 @@ main{
 	max-width: 40em;
 	overflow: hidden;
 }
+.config button {
+	border-radius: 0.5rem;
+}
+.config button[type="submit"] {
+	border: 2px solid rgb(83, 100, 148);
+	background-color: rgb(187, 206, 228);
+}
+.config button[type="submit"][disabled] {
+	border-color: #aaa;
+	background-color: #ccc;
+	color: #999;
+}
 .config__header{
 	text-align: center;
 	font-size: 1.5rem;
@@ -200,6 +225,13 @@ main{
 }
 .config__section{
 	flex-grow: 1;
+}
+.config__submit{
+	display: flex;
+	justify-content: center;
+}
+.config__submit button[type='submit']{
+	font-weight: bold;
 }
 .alert{
 	border-width: 3px;
@@ -235,12 +267,15 @@ main{
     border-top-right-radius: 3px;
 }
 .existing-slot {
+	display: flex;
+	align-items: center;
     padding: 0.25rem 1rem;
     background-color: #e3e5ef;
+    cursor: pointer;
+	min-height: 40px;
 }
 .existing-slot:nth-child(odd) {
     background-color: #979fbf;
-    cursor: pointer;
 }
 .existing-slot:last-child {
     border-bottom-left-radius: 3px;
@@ -249,48 +284,25 @@ main{
 .existing-slot:hover {
     text-shadow: 0 0 4px white;
 }
+.existing-slot:nth-child(even):hover {
+    text-shadow: 0 0 4px #979fbf;
+}
 </style>
 
 <script>
 import { slide, fade } from 'svelte-transitions';
-import Player from './Player.html'
+import Player from './Player.html';
+import AutoId from './autoid';
+import {truncate, preventDefault, stopPropagation} from './helpers';
+import * as Storage from './storage';
 
-const {autoId, resetAutoId} = (() => {
-	let curr = 0;
-	return {
-		autoId: () => curr++,
-		resetAutoId: () => { curr = 0; }
-	};
-})();
-
-const truncate = (val, positions) => {
-	if(!positions) positions = 3;
-	const factor = Math.pow(10, positions);
-	return Math.round(val * factor) / factor;
-};
+// create autoId and resetAutoId functions
+const autoId = new AutoId();
 
 export default {
 	actions: {
-		prevent(node, eventName) {
-			const theGreatPreventer = (ev) => { ev.preventDefault(); };
-			node.addEventListener(eventName, theGreatPreventer);
-			return {
-					update: () => {},
-					destroy: () => {
-						node.removeEventListener(eventName, theGreatPreventer);
-					}
-				}
-		},
-		stopPropagation(node, eventName) {
-			const stoppingPower = (ev) => { ev.stopPropagation(); };
-			node.addEventListener(eventName, stoppingPower);
-			return {
-				update: () => {},
-				destroy: () => {
-					node.removeEventListener(eventName, stoppingPower);
-				}
-			}
-		}
+		prevent: preventDefault,
+		stopPropagation: stopPropagation
 	},
 	components: {
 		Player
@@ -302,6 +314,14 @@ export default {
 		slide,
 		fade
 	},
+	oncreate(){
+		const dfltLayout = Storage.getDefaultLayout();
+		this.loadLayout(dfltLayout);
+		this.set({
+			existingSaves: Storage.getLayoutNames()
+		})
+		console.log('done checking for saved layout');
+	},
 	data() {
 		return {
 			addPlayerExpanded: true,
@@ -311,6 +331,7 @@ export default {
 			windowWidth: 1,
 			windowHeight: 1,
 			showOverlay: false,
+			existingSaves: [],
 			saveFile: '',
 			tempSaveSlot: ''
 		}
@@ -321,7 +342,7 @@ export default {
 			const { players, playerName, characterName } = this.get();
 			this.set({
 				players: [...players, {
-					id: autoId(),
+					id: autoId.next(),
 					playerName: playerName,
 					characterName: characterName,
 					tags: []
@@ -338,7 +359,7 @@ export default {
 				playerName: '',
 				characterName: ''
 			});
-			resetAutoId();
+			autoId.reset();
 		},
 		removePlayer(player){
 			const {players} = this.get();
@@ -353,10 +374,24 @@ export default {
 			this.set({players});
 		},
 		startSaving(saveSlotName){
+			const {players} = this.get();
+			Storage.saveLayout(saveSlotName, players);
 			this.set({
 				saveFile: saveSlotName,
-				tempSaveSlot: ''
-			})
+				tempSaveSlot: '',
+				existingSaves: Storage.getLayoutNames()
+			});
+		},
+		loadLayout(saveSlotName){
+			const layout = Storage.getLayout(saveSlotName);
+			if(layout != null){
+				this.set({
+					addPlayerExpanded: false,
+					players: layout,
+					tempSaveSlot: '',
+					saveFile: saveSlotName
+				});
+			}
 		}
 	}
 }
